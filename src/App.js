@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
-import { Container, Typography, Box, Link, Paper, Button } from '@mui/material';
+import React, { useState, useCallback } from 'react';
+import { Container, Typography, Box, Link, Paper, Button, IconButton, Snackbar } from '@mui/material';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import TypeButton from './components/TypeButton';
 import CoverageTable from './components/CoverageTable';
 import { typeData } from './data/typeData';
+import { typeEffectiveness } from './data/typeEffectiveness';
 import './App.css';
 
 const theme = createTheme({
@@ -14,6 +16,7 @@ const theme = createTheme({
 
 function App() {
   const [selectedTypes, setSelectedTypes] = useState([]);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
 
   const handleTypeClick = (type) => {
     setSelectedTypes(prev => 
@@ -26,6 +29,64 @@ function App() {
   const handleReset = () => {
     setSelectedTypes([]);
   };
+
+  const calculateTypeSummary = useCallback(() => {
+    if (selectedTypes.length === 0) return { 4: 0, 2: 0, 1: 0, 0.5: 0, 0.25: 0, 0: 0 };
+
+    const summary = { 4: 0, 2: 0, 1: 0, 0.5: 0, 0.25: 0, 0: 0 };
+    const types = Object.keys(typeData);
+
+    types.forEach(type1 => {
+      types.forEach(type2 => {
+        if (types.indexOf(type1) <= types.indexOf(type2)) {
+          const effectivenesses = selectedTypes.map(attackType => {
+            if (type1 === type2) {
+              return typeEffectiveness[type1][attackType];
+            }
+            return typeEffectiveness[type1][attackType] * typeEffectiveness[type2][attackType];
+          });
+
+          const maxEffectiveness = effectivenesses.length > 0 
+            ? Math.max(...effectivenesses)
+            : 1;
+
+          summary[maxEffectiveness] = (summary[maxEffectiveness] || 0) + 1;
+        }
+      });
+    });
+
+    return summary;
+  }, [selectedTypes]);
+
+  const formatCSVString = useCallback(() => {
+    const summary = calculateTypeSummary();
+    
+    // 選択されたタイプのみを含む配列を作成
+    const selectedTypesStr = selectedTypes.length > 0 
+      ? selectedTypes.join(',') + ',' 
+      : '';
+    
+    // 倍率の集計を追加
+    const effectivenessColumns = `${summary[4]},${summary[2]},${summary[1]},${summary[0.5]},${summary[0.25]},${summary[0]}`;
+    
+    return `${selectedTypesStr}${effectivenessColumns}`;
+  }, [selectedTypes, calculateTypeSummary]);
+
+  const handleCopyClick = async () => {
+    try {
+      const csvString = formatCSVString();
+      await navigator.clipboard.writeText(csvString);
+      setSnackbarOpen(true);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
+  };
+
+  const handleSnackbarClose = () => {
+    setSnackbarOpen(false);
+  };
+
+  const summary = calculateTypeSummary();
 
   return (
     <ThemeProvider theme={theme}>
@@ -99,9 +160,9 @@ function App() {
             </Button>
           </Box>
 
-          {selectedTypes.length > 0 && (
-            <Box sx={{ my: 2 }}>
-              <Typography variant="h5">
+          <Box sx={{ my: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Typography variant="h5" sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
                 <span style={{ fontSize: '24px' }}>▍選択したタイプ: </span>
                 {selectedTypes.map((type) => (
                   <span
@@ -110,7 +171,6 @@ function App() {
                       backgroundColor: typeData[type].color,
                       color: typeData[type].textColor,
                       padding: '5px',
-                      marginRight: '10px',
                       display: 'inline-block',
                       fontSize: '20px'
                     }}
@@ -119,8 +179,25 @@ function App() {
                   </span>
                 ))}
               </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
+                <Typography sx={{ fontSize: '20px', whiteSpace: 'nowrap' }}>
+                  {formatCSVString()}
+                </Typography>
+                <IconButton 
+                  onClick={handleCopyClick}
+                  size="small"
+                  sx={{ 
+                    backgroundColor: 'rgba(0,0,0,0.1)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(0,0,0,0.2)',
+                    }
+                  }}
+                >
+                  <ContentCopyIcon fontSize="small" />
+                </IconButton>
+              </Box>
             </Box>
-          )}
+          </Box>
 
           <CoverageTable selectedTypes={selectedTypes} />
         </Paper>
@@ -139,6 +216,13 @@ function App() {
             © 2024 suisui-swimmy
           </Typography>
         </Box>
+
+        <Snackbar
+          open={snackbarOpen}
+          autoHideDuration={2000}
+          onClose={handleSnackbarClose}
+          message="集計をコピーしました"
+        />
       </Container>
     </ThemeProvider>
   );
