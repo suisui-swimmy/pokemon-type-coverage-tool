@@ -199,7 +199,7 @@ const CoverageTable = ({ selectedTypes }) => {
           return (
             <Box key={multiplier}>
               <Typography sx={{ fontSize: '20px', mb: 1 }}>
-                {multiplier}倍のタイプ:
+              {multiplier}倍を与えるタイプの合計:
               </Typography>
               {chunks.map((chunk, index) => (
                 <Table 
@@ -295,7 +295,7 @@ const CoverageTable = ({ selectedTypes }) => {
           return (
             <Box key={effectiveness}>
               <Typography variant="h5" sx={{ mt: 1, fontSize: '24px' }}>
-                ▍{effectiveness}倍のタイプ:
+                ▍選択したタイプを{effectiveness}倍で受けるタイプ:
               </Typography>
               <Box sx={{ ml: 2, mt: 1 }}>
                 {sortedTypesList.map((typePair, index) => {

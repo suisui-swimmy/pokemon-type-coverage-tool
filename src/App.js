@@ -1,6 +1,7 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Container, Typography, Box, Link, Paper, Button, IconButton, Snackbar } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import KeyboardReturnIcon from '@mui/icons-material/KeyboardReturn';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import TypeButton from './components/TypeButton';
 import CoverageTable from './components/CoverageTable';
@@ -14,9 +15,24 @@ const theme = createTheme({
   },
 });
 
+const DEFAULT_SUMMARY = { 4: 0, 2: 0, 1: 0, 0.5: 0, 0.25: 0, 0: 0 };
+
 function App() {
   const [selectedTypes, setSelectedTypes] = useState([]);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [dataRows, setDataRows] = useState([]);
+
+  useEffect(() => {
+    const handleKeyPress = (event) => {
+      if (event.shiftKey && event.key === 'Enter') {
+        event.preventDefault();
+        handleNewLine();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [selectedTypes]);
 
   const handleTypeClick = (type) => {
     setSelectedTypes(prev => 
@@ -28,12 +44,13 @@ function App() {
 
   const handleReset = () => {
     setSelectedTypes([]);
+    setDataRows([]);
   };
 
   const calculateTypeSummary = useCallback(() => {
-    if (selectedTypes.length === 0) return { 4: 0, 2: 0, 1: 0, 0.5: 0, 0.25: 0, 0: 0 };
+    if (selectedTypes.length === 0) return DEFAULT_SUMMARY;
 
-    const summary = { 4: 0, 2: 0, 1: 0, 0.5: 0, 0.25: 0, 0: 0 };
+    const summary = { ...DEFAULT_SUMMARY };
     const types = Object.keys(typeData);
 
     types.forEach(type1 => {
@@ -61,21 +78,39 @@ function App() {
   const formatCSVString = useCallback(() => {
     const summary = calculateTypeSummary();
     
-    // 選択されたタイプのみを含む配列を作成
     const selectedTypesStr = selectedTypes.length > 0 
       ? selectedTypes.join(',') + ',' 
       : '';
     
-    // 倍率の集計を追加
     const effectivenessColumns = `${summary[4]},${summary[2]},${summary[1]},${summary[0.5]},${summary[0.25]},${summary[0]}`;
     
     return `${selectedTypesStr}${effectivenessColumns}`;
   }, [selectedTypes, calculateTypeSummary]);
 
+  const handleNewLine = () => {
+    const currentData = {
+      types: [...selectedTypes],
+      csvString: formatCSVString()
+    };
+    setDataRows(prev => [...prev, currentData]);
+    setSelectedTypes([]); 
+  };
+
   const handleCopyClick = async () => {
     try {
-      const csvString = formatCSVString();
-      await navigator.clipboard.writeText(csvString);
+      let textToCopy = '';
+      if (dataRows.length > 0) {
+        textToCopy = dataRows.map(row => row.csvString).join('\n');
+        if (selectedTypes.length > 0) {
+          textToCopy += '\n' + formatCSVString();
+        }
+      } else if (selectedTypes.length > 0) {
+        textToCopy = formatCSVString();
+      } else {
+        textToCopy = '0,0,0,0,0,0';
+      }
+      
+      await navigator.clipboard.writeText(textToCopy);
       setSnackbarOpen(true);
     } catch (err) {
       console.error('Failed to copy text: ', err);
@@ -86,7 +121,19 @@ function App() {
     setSnackbarOpen(false);
   };
 
-  const summary = calculateTypeSummary();
+  const renderTypeTag = (type) => (
+    <span
+      style={{
+        backgroundColor: typeData[type].color,
+        color: typeData[type].textColor,
+        padding: '5px',
+        display: 'inline-block',
+        fontSize: '20px'
+      }}
+    >
+      {type}
+    </span>
+  );
 
   return (
     <ThemeProvider theme={theme}>
@@ -161,40 +208,64 @@ function App() {
           </Box>
 
           <Box sx={{ my: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Typography variant="h5" sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
-                <span style={{ fontSize: '24px' }}>▍選択したタイプ: </span>
-                {selectedTypes.map((type) => (
-                  <span
-                    key={type}
-                    style={{
-                      backgroundColor: typeData[type].color,
-                      color: typeData[type].textColor,
-                      padding: '5px',
-                      display: 'inline-block',
-                      fontSize: '20px'
-                    }}
-                  >
-                    {type}
-                  </span>
-                ))}
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
-                <Typography sx={{ fontSize: '20px', whiteSpace: 'nowrap' }}>
-                  {formatCSVString()}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                <Typography variant="h5" sx={{ fontSize: '24px', width: '210px', flexShrink: 0 }}>
+                  ▍選択したタイプ:
                 </Typography>
-                <IconButton 
-                  onClick={handleCopyClick}
-                  size="small"
-                  sx={{ 
-                    backgroundColor: 'rgba(0,0,0,0.1)',
-                    '&:hover': {
-                      backgroundColor: 'rgba(0,0,0,0.2)',
-                    }
-                  }}
-                >
-                  <ContentCopyIcon fontSize="small" />
-                </IconButton>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  {dataRows.map((row, index) => (
+                    <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: '200px' }}>
+                        {row.types.map((type, typeIndex) => (
+                          <React.Fragment key={typeIndex}>
+                            {renderTypeTag(type)}
+                          </React.Fragment>
+                        ))}
+                      </Box>
+                      <Typography sx={{ fontSize: '20px', fontFamily: 'M PLUS Rounded 1c", sans-serif' }}>
+                        {row.csvString}
+                      </Typography>
+                    </Box>
+                  ))}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: '200px' }}>
+                      {selectedTypes.map((type, index) => (
+                        <React.Fragment key={index}>
+                          {renderTypeTag(type)}
+                        </React.Fragment>
+                      ))}
+                    </Box>
+                    <Typography sx={{ fontSize: '20px', fontFamily: 'M PLUS Rounded 1c", sans-serif' }}>
+                      {formatCSVString() || '0,0,0,0,0,0'}
+                    </Typography>
+                    <IconButton
+                      onClick={handleNewLine}
+                      size="small"
+                      sx={{ 
+                        backgroundColor: 'rgba(0,0,0,0.1)',
+                        '&:hover': {
+                          backgroundColor: 'rgba(0,0,0,0.2)',
+                        }
+                      }}
+                      title="Shift + Enter"
+                    >
+                      <KeyboardReturnIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton 
+                      onClick={handleCopyClick}
+                      size="small"
+                      sx={{ 
+                        backgroundColor: 'rgba(0,0,0,0.1)',
+                        '&:hover': {
+                          backgroundColor: 'rgba(0,0,0,0.2)',
+                        }
+                      }}
+                    >
+                      <ContentCopyIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                </Box>
               </Box>
             </Box>
           </Box>
