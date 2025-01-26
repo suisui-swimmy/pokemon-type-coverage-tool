@@ -252,7 +252,7 @@ function App() {
                <FormControlLabel 
                  value="total" 
                  control={<Radio />} 
-                 label="合計" 
+                 label="合算" 
                  sx={{ '& .MuiTypography-root': { fontSize: '0.9rem' } }}
                />
              </RadioGroup>
