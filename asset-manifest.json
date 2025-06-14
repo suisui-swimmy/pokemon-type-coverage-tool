@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/pokemon-type-coverage-tool/static/css/main.c0d65125.css",
+    "main.js": "/pokemon-type-coverage-tool/static/js/main.bb0c886a.js",
+    "index.html": "/pokemon-type-coverage-tool/index.html",
+    "main.c0d65125.css.map": "/pokemon-type-coverage-tool/static/css/main.c0d65125.css.map",
+    "main.bb0c886a.js.map": "/pokemon-type-coverage-tool/static/js/main.bb0c886a.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.c0d65125.css",
+    "static/js/main.bb0c886a.js"
+  ]
+}
