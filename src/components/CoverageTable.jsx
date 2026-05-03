@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, Box } from '@mui/material';
 import { typeData } from '../data/typeData';
 import { typeEffectiveness } from '../data/typeEffectiveness';
+import { getDefenseTypeKey } from '../utils/defenseTypeKey';
 
-const CoverageTable = ({ selectedTypes }) => {
+const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
   const types = Object.keys(typeData);
   const [maxItemsPerRow, setMaxItemsPerRow] = useState(5);
 
@@ -20,6 +21,10 @@ const CoverageTable = ({ selectedTypes }) => {
     window.addEventListener('resize', updateMaxItems);
     return () => window.removeEventListener('resize', updateMaxItems);
   }, []);
+
+  const isExcludedDefenseType = (defenseType1, defenseType2) => (
+    excludedDefenseTypeKeys.has(getDefenseTypeKey(defenseType1, defenseType2))
+  );
 
   const calculateMaxEffectiveness = (defenseType1, defenseType2, attackTypes) => {
     if (types.indexOf(defenseType1) > types.indexOf(defenseType2)) {
@@ -133,7 +138,10 @@ const CoverageTable = ({ selectedTypes }) => {
     
     types.forEach(defenseType1 => {
       types.forEach(defenseType2 => {
-        if (types.indexOf(defenseType1) <= types.indexOf(defenseType2)) {
+        if (
+          types.indexOf(defenseType1) <= types.indexOf(defenseType2) &&
+          !isExcludedDefenseType(defenseType1, defenseType2)
+        ) {
           const effectiveness = calculateMaxEffectiveness(
             defenseType1,
             defenseType2,
@@ -177,9 +185,9 @@ const CoverageTable = ({ selectedTypes }) => {
 
     return {
       4: Array.from(summary[4].entries())
-        .sort(([, a], [, b]) => b - a || types.indexOf(a) - types.indexOf(b)),
+        .sort(([typeA, countA], [typeB, countB]) => countB - countA || types.indexOf(typeA) - types.indexOf(typeB)),
       2: Array.from(summary[2].entries())
-        .sort(([, a], [, b]) => b - a || types.indexOf(a) - types.indexOf(b))
+        .sort(([typeA, countA], [typeB, countB]) => countB - countA || types.indexOf(typeA) - types.indexOf(typeB))
     };
   };
 
