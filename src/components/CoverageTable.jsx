@@ -16,6 +16,10 @@ const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
     if (types.indexOf(defenseType1) > types.indexOf(defenseType2)) {
       return null;
     }
+
+    if (isExcludedDefenseType(defenseType1, defenseType2)) {
+      return 'excluded';
+    }
     
     if (!attackTypes.length) return '-';
 
@@ -49,6 +53,7 @@ const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
 
   const formatEffectiveness = (value) => {
     if (value === null) return '';
+    if (value === 'excluded') return '×';
     if (value === '-') return value;
     if (Number.isInteger(value)) return value.toString();
     return value.toFixed(2).replace(/\.?0+$/, '');
@@ -72,6 +77,13 @@ const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
     if (value === null) return { 
       ...baseStyle,
       backgroundColor: '#999999'
+    };
+
+    if (value === 'excluded') return {
+      ...baseStyle,
+      backgroundColor: '#3f3f46',
+      color: '#fff',
+      fontSize: '20px',
     };
 
     const numValue = parseFloat(value);

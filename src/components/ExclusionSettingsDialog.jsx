@@ -142,7 +142,7 @@ const ExclusionSettingsDialog = ({
                         sx={getCellStyle(type1, type2, disabled, excluded)}
                       >
                         <Box component="span" sx={{ display: 'block', lineHeight: 1.15 }}>
-                          {disabled ? '-' : excluded ? '除外' : type1 === type2 ? type1 : `${type1}${type2}`}
+                          {disabled ? '-' : excluded ? '×' : type1 === type2 ? type1 : `${type1}${type2}`}
                         </Box>
                       </TableCell>
                     );
