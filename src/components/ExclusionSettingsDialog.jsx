@@ -22,10 +22,11 @@ const CELL_SIZE = 44;
 const ExclusionSettingsDialog = ({
   open,
   excludedDefenseTypeKeys,
-  onApplyGeneration9Preset,
+  onApplyPreset,
   onClose,
   onExcludeAll,
   onReset,
+  presets,
   onToggle,
 }) => {
   const types = Object.keys(typeData);
@@ -39,7 +40,7 @@ const ExclusionSettingsDialog = ({
     border: '1px solid #ddd',
     backgroundColor: typeData[type].color,
     color: typeData[type].textColor,
-    fontWeight: 700,
+    fontWeight: 400,
     textAlign: 'center',
   });
 
@@ -55,6 +56,7 @@ const ExclusionSettingsDialog = ({
       textAlign: 'center',
       verticalAlign: 'middle',
       userSelect: 'none',
+      fontWeight: 400,
     };
 
     if (disabled) {
@@ -71,7 +73,6 @@ const ExclusionSettingsDialog = ({
         backgroundColor: '#3f3f46',
         color: '#fff',
         cursor: 'pointer',
-        fontWeight: 700,
       };
     }
 
@@ -80,7 +81,6 @@ const ExclusionSettingsDialog = ({
       background: `linear-gradient(135deg, ${typeData[type1].color} 0 50%, ${typeData[type2].color} 50% 100%)`,
       color: '#111',
       cursor: 'pointer',
-      fontWeight: 700,
     };
   };
 
@@ -96,9 +96,11 @@ const ExclusionSettingsDialog = ({
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', mb: 2 }}>
           <Typography sx={{ fontWeight: 700 }}>プリセット</Typography>
-          <Button variant="outlined" onClick={onApplyGeneration9Preset}>
-            第9世代
-          </Button>
+          {presets.map((preset) => (
+            <Button key={preset.id} variant="outlined" onClick={() => onApplyPreset(preset)}>
+              {preset.label}
+            </Button>
+          ))}
         </Box>
         <TableContainer sx={{ overflowX: 'auto' }}>
           <Table

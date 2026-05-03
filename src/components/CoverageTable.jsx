@@ -1,26 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, Box } from '@mui/material';
 import { typeData } from '../data/typeData';
 import { typeEffectiveness } from '../data/typeEffectiveness';
 import { getDefenseTypeKey } from '../utils/defenseTypeKey';
+import TypeTag from './TypeTag';
 
 const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
   const types = Object.keys(typeData);
-  const [maxItemsPerRow, setMaxItemsPerRow] = useState(5);
-
-  useEffect(() => {
-    const updateMaxItems = () => {
-      const rootDiv = document.querySelector("#root > div");
-      if (rootDiv) {
-        const width = rootDiv.clientWidth;
-        setMaxItemsPerRow(Math.floor((width - 64) / 100) || 5);
-      }
-    };
-
-    updateMaxItems();
-    window.addEventListener('resize', updateMaxItems);
-    return () => window.removeEventListener('resize', updateMaxItems);
-  }, []);
 
   const isExcludedDefenseType = (defenseType1, defenseType2) => (
     excludedDefenseTypeKeys.has(getDefenseTypeKey(defenseType1, defenseType2))
@@ -119,19 +105,7 @@ const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
     return { ...baseStyle, backgroundColor: 'white' };
   };
 
-  const renderTypeTag = (type) => (
-    <span
-      style={{
-        backgroundColor: typeData[type].color,
-        color: typeData[type].textColor,
-        padding: '5px',
-        fontSize: '20px',
-        display: 'inline-block'
-      }}
-    >
-      {type}
-    </span>
-  );
+  const renderTypeTag = (type) => <TypeTag type={type} />;
 
   const findTypesByEffectiveness = () => {
     const typeGroups = { 0.25: [], 0.5: [], 1: [] };
@@ -191,62 +165,71 @@ const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
     };
   };
 
-  const renderTypeSummary = (typesList) => {
+  const renderTypeSummary = (effectiveness, typesList) => {
     const summary = calculateTypeEffectivenessSummary(typesList);
+    const availableMultipliers = [4, 2].filter(multiplier => summary[multiplier].length > 0);
+
+    if (availableMultipliers.length === 0) return null;
     
     return (
-      <Box sx={{ mt: 2, ml: 2 }}>
-        {[4, 2].map(multiplier => {
-          if (summary[multiplier].length === 0) return null;
-          
-          const chunks = Array.from(
-            { length: Math.ceil(summary[multiplier].length / maxItemsPerRow) },
-            (_, i) => summary[multiplier].slice(i * maxItemsPerRow, (i + 1) * maxItemsPerRow)
-          );
-          
-          return (
-            <Box key={multiplier}>
-              <Typography sx={{ fontSize: '20px', mb: 1 }}>
-                {multiplier}倍のタイプ:
-              </Typography>
-              {chunks.map((chunk, index) => (
-                <Table 
-                  key={index}
-                  size="small" 
-                  sx={{ 
-                    width: 'auto',
-                    backgroundColor: 'white',
-                    mb: 2,
-                    '& td': {
-                      border: '1px solid #ddd',
-                      padding: '8px 16px',
-                      textAlign: 'center'
-                    }
-                  }}
-                >
-                  <TableBody>
-                    <TableRow>
-                      {chunk.map(([type]) => (
-                        <TableCell key={type} sx={{ minWidth: '52px' }}>
-                          {renderTypeTag(type)}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                    <TableRow>
-                      {chunk.map(([type, count]) => (
-                        <TableCell key={type}>
-                          <Typography sx={{ fontSize: '20px' }}>
-                            × {count}
-                          </Typography>
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              ))}
-            </Box>
-          );
-        })}
+      <Box sx={{ mt: 2 }}>
+        <Table
+          size="small"
+          sx={{
+            width: '100%',
+            tableLayout: 'fixed',
+            backgroundColor: 'white',
+            borderCollapse: 'collapse',
+            '& th, & td': {
+              border: '1px solid #d8d8d8',
+              padding: '10px 12px',
+              verticalAlign: 'middle',
+            },
+            '& th': {
+              backgroundColor: '#333',
+              color: 'white',
+              fontSize: '18px',
+              fontWeight: 400,
+              textAlign: 'center',
+            },
+          }}
+        >
+          <TableHead>
+            <TableRow>
+              <TableCell component="th" colSpan={2}>
+                {effectiveness}倍のタイプに対し有効なタイプの合計
+              </TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {availableMultipliers.map(multiplier => (
+              <TableRow key={multiplier}>
+                <TableCell sx={{ width: 96, textAlign: 'center', fontSize: '20px', whiteSpace: 'nowrap' }}>
+                  {multiplier}倍
+                </TableCell>
+                <TableCell sx={{ minWidth: 0 }}>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
+                    {summary[multiplier].map(([type, count]) => (
+                      <Box
+                        key={type}
+                        sx={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 0.75,
+                        }}
+                      >
+                        {renderTypeTag(type)}
+                        <Typography component="span" sx={{ fontSize: '20px', whiteSpace: 'nowrap' }}>
+                          × {count}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </Box>
     );
   };
@@ -264,25 +247,68 @@ const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
     });
   };
 
-  const renderWeaknessInfo = (defenseType1, defenseType2 = null) => {
-    const effectiveness = getEffectivenessForType(defenseType1, defenseType2);
+  const renderDefenseTypePair = (typePair) => {
+    const typeList = Array.isArray(typePair) ? typePair : [typePair];
+
     return (
-      <Box sx={{ ml: 2, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1 }}>
-        {[4, 2].map(multiplier => {
-          if (!effectiveness[multiplier]?.length) return null;
-          return (
-            <Box key={multiplier} sx={{ display: 'inline-flex', alignItems: 'center', mr: 2 }}>
-              <Typography sx={{ mr: 1, fontSize: '20px', whiteSpace: 'nowrap' }}>
-                {multiplier}倍:
-              </Typography>
-              {effectiveness[multiplier].map(type => (
-                <Box key={type} sx={{ mr: 0.5 }}>
-                  {renderTypeTag(type)}
-                </Box>
-              ))}
-            </Box>
-          );
-        })}
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.75 }}>
+        {typeList.map(type => (
+          <Box key={type}>
+            {renderTypeTag(type)}
+          </Box>
+        ))}
+      </Box>
+    );
+  };
+
+  const renderMultiplierAttackGroup = (multiplier, attackTypes) => (
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 0.75,
+        flexWrap: 'wrap',
+        minWidth: 0,
+      }}
+    >
+      <Typography sx={{ fontSize: '20px', whiteSpace: 'nowrap' }}>
+        {multiplier}倍:
+      </Typography>
+      {attackTypes.map(type => (
+        <Box key={type}>
+          {renderTypeTag(type)}
+        </Box>
+      ))}
+    </Box>
+  );
+
+  const renderEffectiveAttackTypes = (defenseType1, defenseType2 = null) => {
+    const effectiveness = getEffectivenessForType(defenseType1, defenseType2);
+    const availableMultipliers = [4, 2].filter(multiplier => effectiveness[multiplier]?.length);
+
+    return (
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: availableMultipliers.length > 1 ? { xs: '1fr', sm: '1fr 1fr' } : '1fr',
+          alignItems: 'stretch',
+          minWidth: 0,
+        }}
+      >
+        {availableMultipliers.map((multiplier, index) => (
+          <Box
+            key={multiplier}
+            sx={{
+              minWidth: 0,
+              py: 0.5,
+              pl: index === 0 ? 0 : { xs: 0, sm: 1.5 },
+              pr: index === 0 && availableMultipliers.length > 1 ? { xs: 0, sm: 1.5 } : 0,
+              borderLeft: index === 0 ? 0 : { xs: 0, sm: '1px solid #d8d8d8' },
+            }}
+          >
+            {renderMultiplierAttackGroup(multiplier, effectiveness[multiplier])}
+          </Box>
+        ))}
       </Box>
     );
   };
@@ -302,33 +328,57 @@ const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
 
           return (
             <Box key={effectiveness}>
-              <Typography variant="h5" sx={{ mt: 1, fontSize: '24px' }}>
-                ▍{effectiveness}倍のタイプ:
-              </Typography>
-              <Box sx={{ ml: 2, mt: 1 }}>
-                {sortedTypesList.map((typePair, index) => {
-                  if (Array.isArray(typePair)) {
-                    const [type1, type2] = typePair;
-                    return (
-                      <Box key={`${type1}-${type2}`} sx={{ mb: 2 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          {renderTypeTag(type1)}
-                          {renderTypeTag(type2)}
-                        </Box>
-                        {renderWeaknessInfo(type1, type2)}
-                      </Box>
-                    );
-                  }
-                  return (
-                    <Box key={typePair} sx={{ mb: 2 }}>
-                      <Box>
-                        {renderTypeTag(typePair)}
-                      </Box>
-                      {renderWeaknessInfo(typePair)}
-                    </Box>
-                  );
-                })}
-                {renderTypeSummary(sortedTypesList)}
+              {renderTypeSummary(effectiveness, sortedTypesList)}
+              <Box sx={{ mt: 2 }}>
+                <Table
+                  size="small"
+                  sx={{
+                    width: '100%',
+                    tableLayout: 'fixed',
+                    backgroundColor: 'white',
+                    borderCollapse: 'collapse',
+                    '& th, & td': {
+                      border: '1px solid #d8d8d8',
+                      padding: '10px 12px',
+                      verticalAlign: 'middle',
+                    },
+                    '& th': {
+                      backgroundColor: '#222',
+                      color: 'white',
+                      fontSize: '18px',
+                      fontWeight: 400,
+                      textAlign: 'center',
+                    },
+                  }}
+                >
+                  <TableHead>
+                    <TableRow>
+                      <TableCell component="th" sx={{ width: 220 }}>
+                        {effectiveness}倍のタイプ
+                      </TableCell>
+                      <TableCell component="th">
+                        有効なタイプ
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {sortedTypesList.map((typePair) => {
+                      const [type1, type2] = Array.isArray(typePair) ? typePair : [typePair, null];
+                      const rowKey = type2 ? `${type1}-${type2}` : type1;
+
+                      return (
+                        <TableRow key={rowKey}>
+                          <TableCell>
+                            {renderDefenseTypePair(typePair)}
+                          </TableCell>
+                          <TableCell>
+                            {renderEffectiveAttackTypes(type1, type2)}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
               </Box>
             </Box>
           );

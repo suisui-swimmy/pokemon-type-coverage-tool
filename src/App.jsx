@@ -2,27 +2,17 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Container, Typography, Box, Link, Paper, Button, IconButton, Tooltip } from '@mui/material';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import TypeButton from './components/TypeButton';
+import TypeTag from './components/TypeTag';
 import CoverageTable from './components/CoverageTable';
 import ExclusionSettingsDialog from './components/ExclusionSettingsDialog';
 import { typeData } from './data/typeData';
-import { getAllDefenseTypeKeys, getDefenseTypeKey } from './utils/defenseTypeKey';
+import { exclusionPresets } from './data/exclusionPresets';
+import { getAllDefenseTypeKeys } from './utils/defenseTypeKey';
 import infoIconUrl from './assets/info-icon.svg';
 import settingsGearIconUrl from './assets/settings-gear-icon.svg';
 import './App.css';
 
 const EXCLUDED_DEFENSE_TYPES_STORAGE_KEY = 'pokemon-type-coverage-tool.excluded-defense-types';
-const GENERATION_9_EXCLUDED_DEFENSE_TYPES = [
-  ['無', '氷'],
-  ['氷', '毒'],
-  ['無', '虫'],
-  ['無', '岩'],
-  ['岩', '霊'],
-  ['虫', '竜'],
-  ['無', '鋼'],
-  ['炎', '妖'],
-  ['地', '妖'],
-  ['竜', '妖'],
-].map(([type1, type2]) => getDefenseTypeKey(type1, type2));
 
 const theme = createTheme({
   typography: {
@@ -90,8 +80,8 @@ function App() {
     setExcludedDefenseTypeKeys(getAllDefenseTypeKeys());
   };
 
-  const handleApplyGeneration9Preset = () => {
-    setExcludedDefenseTypeKeys(GENERATION_9_EXCLUDED_DEFENSE_TYPES);
+  const handleApplyExclusionPreset = (preset) => {
+    setExcludedDefenseTypeKeys(preset.excludedDefenseTypeKeys);
   };
 
   return (
@@ -184,28 +174,16 @@ function App() {
             </Button>
           </Box>
 
-          {selectedTypes.length > 0 && (
-            <Box sx={{ my: 2 }}>
-              <Typography variant="h5">
-                <span style={{ fontSize: '24px' }}>▍選択したタイプ: </span>
-                {selectedTypes.map((type) => (
-                  <span
-                    key={type}
-                    style={{
-                      backgroundColor: typeData[type].color,
-                      color: typeData[type].textColor,
-                      padding: '5px',
-                      marginRight: '10px',
-                      display: 'inline-block',
-                      fontSize: '20px'
-                    }}
-                  >
-                    {type}
-                  </span>
-                ))}
-              </Typography>
+          <Box sx={{ my: 2, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+            <Typography variant="h5" component="span" sx={{ fontSize: '24px' }}>
+              ▍選択したタイプ:
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.75 }}>
+              {selectedTypes.map((type) => (
+                <TypeTag key={type} type={type} />
+              ))}
             </Box>
-          )}
+          </Box>
 
           <CoverageTable
             selectedTypes={selectedTypes}
@@ -230,9 +208,10 @@ function App() {
         <ExclusionSettingsDialog
           open={isSettingsOpen}
           excludedDefenseTypeKeys={excludedDefenseTypeKeySet}
-          onApplyGeneration9Preset={handleApplyGeneration9Preset}
+          onApplyPreset={handleApplyExclusionPreset}
           onClose={() => setIsSettingsOpen(false)}
           onExcludeAll={handleExcludeAllDefenseTypes}
+          presets={exclusionPresets}
           onReset={handleResetExcludedDefenseTypes}
           onToggle={handleToggleExcludedDefenseType}
         />
