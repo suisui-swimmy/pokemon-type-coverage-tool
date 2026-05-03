@@ -26,7 +26,7 @@ const GENERATION_9_EXCLUDED_DEFENSE_TYPES = [
 
 const theme = createTheme({
   typography: {
-    fontFamily: '"M PLUS Rounded 1c", sans-serif',
+    fontFamily: '"LINE Seed JP", sans-serif',
   },
 });
 
