@@ -5,8 +5,34 @@ import { typeEffectiveness } from '../data/typeEffectiveness';
 import { getDefenseTypeKey } from '../utils/defenseTypeKey';
 import TypeTag from './TypeTag';
 
+const SECTION_STYLES = {
+  0.25: {
+    accent: '#6f73c8',
+    surface: 'rgba(0, 0, 255, 0.4)',
+    header: '#28456f',
+    badgeBg: 'rgba(255, 255, 255, 0.45)',
+    badgeText: '#20395f',
+  },
+  0.5: {
+    accent: '#8a9fe8',
+    surface: 'rgba(0, 0, 255, 0.2)',
+    header: '#1f6872',
+    badgeBg: 'rgba(255, 255, 255, 0.48)',
+    badgeText: '#164d54',
+  },
+  1: {
+    accent: '#b8b8b8',
+    surface: '#f2f2f2',
+    header: '#4e5358',
+    badgeBg: '#dedede',
+    badgeText: '#34383c',
+  },
+};
+
 const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
   const types = Object.keys(typeData);
+
+  const getSectionStyle = (effectiveness) => SECTION_STYLES[effectiveness] || SECTION_STYLES[1];
 
   const isExcludedDefenseType = (defenseType1, defenseType2) => (
     excludedDefenseTypeKeys.has(getDefenseTypeKey(defenseType1, defenseType2))
@@ -177,7 +203,7 @@ const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
     };
   };
 
-  const renderTypeSummary = (effectiveness, typesList) => {
+  const renderTypeSummary = (effectiveness, typesList, sectionStyle) => {
     const summary = calculateTypeEffectivenessSummary(typesList);
     const availableMultipliers = [4, 2].filter(multiplier => summary[multiplier].length > 0);
 
@@ -198,8 +224,8 @@ const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
               verticalAlign: 'middle',
             },
             '& th': {
-              backgroundColor: '#333',
-              color: 'white',
+              backgroundColor: sectionStyle.accent,
+              color: '#111',
               fontSize: '18px',
               fontWeight: 400,
               textAlign: 'center',
@@ -231,7 +257,15 @@ const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
                         }}
                       >
                         {renderTypeTag(type)}
-                        <Typography component="span" sx={{ fontSize: '20px', whiteSpace: 'nowrap' }}>
+                        <Typography
+                          component="span"
+                          sx={{
+                            width: 44,
+                            display: 'inline-block',
+                            fontSize: '20px',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
                           × {count}
                         </Typography>
                       </Box>
@@ -276,21 +310,23 @@ const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
   const renderMultiplierAttackGroup = (multiplier, attackTypes) => (
     <Box
       sx={{
-        display: 'flex',
-        alignItems: 'center',
+        display: 'grid',
+        gridTemplateColumns: '58px 1fr',
+        alignItems: 'start',
         gap: 0.75,
-        flexWrap: 'wrap',
         minWidth: 0,
       }}
     >
-      <Typography sx={{ fontSize: '20px', whiteSpace: 'nowrap' }}>
+      <Typography sx={{ fontSize: '20px', whiteSpace: 'nowrap', lineHeight: '37px' }}>
         {multiplier}倍:
       </Typography>
-      {attackTypes.map(type => (
-        <Box key={type}>
-          {renderTypeTag(type)}
-        </Box>
-      ))}
+      <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.75, minWidth: 0 }}>
+        {attackTypes.map(type => (
+          <Box key={type}>
+            {renderTypeTag(type)}
+          </Box>
+        ))}
+      </Box>
     </Box>
   );
 
@@ -337,10 +373,39 @@ const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
           if (typesList.length === 0) return null;
 
           const sortedTypesList = sortTypesByEffectiveness(typesList);
+          const sectionStyle = getSectionStyle(effectiveness);
 
           return (
-            <Box key={effectiveness}>
-              {renderTypeSummary(effectiveness, sortedTypesList)}
+            <Box
+              key={effectiveness}
+              sx={{
+                mt: 3,
+                p: { xs: 1.5, sm: 2 },
+                border: `3px solid ${sectionStyle.accent}`,
+                backgroundColor: sectionStyle.surface,
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, flexWrap: 'wrap' }}>
+                <Typography sx={{ fontSize: '22px', fontWeight: 700, color: '#111' }}>
+                  {effectiveness}倍のタイプ
+                </Typography>
+                <Box
+                  component="span"
+                  sx={{
+                    px: 1,
+                    py: 0.25,
+                    borderRadius: '4px',
+                    backgroundColor: sectionStyle.badgeBg,
+                    color: '#111',
+                    fontSize: '14px',
+                    fontWeight: 700,
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {sortedTypesList.length}件
+                </Box>
+              </Box>
+              {renderTypeSummary(effectiveness, sortedTypesList, sectionStyle)}
               <Box sx={{ mt: 2 }}>
                 <Table
                   size="small"
@@ -355,8 +420,8 @@ const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
                       verticalAlign: 'middle',
                     },
                     '& th': {
-                      backgroundColor: '#222',
-                      color: 'white',
+                      backgroundColor: sectionStyle.accent,
+                      color: '#111',
                       fontSize: '18px',
                       fontWeight: 400,
                       textAlign: 'center',
@@ -430,7 +495,10 @@ const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
               <TableCell 
                 style={{
                   ...getCellStyle('-'),
-                  backgroundColor: '#f8f9fa'
+                  backgroundColor: '#f8f9fa',
+                  position: 'sticky',
+                  left: 0,
+                  zIndex: 4,
                 }}
               />
               {types.map(type => (
@@ -455,6 +523,9 @@ const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
                     ...getCellStyle('-'),
                     backgroundColor: typeData[defenseType1].color,
                     color: typeData[defenseType1].textColor,
+                    position: 'sticky',
+                    left: 0,
+                    zIndex: 3,
                   }}
                 >
                   {defenseType1}
