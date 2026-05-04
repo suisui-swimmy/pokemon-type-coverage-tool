@@ -426,35 +426,66 @@ const CoverageTable = ({
     );
   };
 
-  const renderMobileTypeDetailCard = (typePair) => {
-    const [type1, type2] = Array.isArray(typePair) ? typePair : [typePair, null];
-    const effectiveness = getEffectivenessForType(type1, type2);
-    const availableMultipliers = [4, 2].filter(multiplier => effectiveness[multiplier]?.length);
-
-    return (
-      <Box
-        key={type2 ? `${type1}-${type2}` : type1}
-        sx={{
-          p: 1.25,
-          backgroundColor: 'white',
+  const renderMobileTypesTable = (effectiveness, sortedTypesList, sectionStyle) => (
+    <Table
+      size="small"
+      sx={{
+        width: '100%',
+        tableLayout: 'fixed',
+        backgroundColor: 'white',
+        borderCollapse: 'collapse',
+        '& th, & td': {
           border: '1px solid #d8d8d8',
-          display: 'grid',
-          gap: 1,
-        }}
-      >
-        <Box sx={{ justifySelf: 'start' }}>
-          {renderDefenseTypePair(typePair)}
-        </Box>
-        <Box sx={{ display: 'grid', gap: 0.75 }}>
-          {availableMultipliers.map(multiplier => (
-            <Box key={multiplier}>
-              {renderMultiplierAttackGroup(multiplier, effectiveness[multiplier])}
-            </Box>
-          ))}
-        </Box>
-      </Box>
-    );
-  };
+          padding: '10px 8px',
+          verticalAlign: 'top',
+        },
+        '& th': {
+          backgroundColor: sectionStyle.accent,
+          color: '#111',
+          fontSize: '18px',
+          fontWeight: 400,
+          textAlign: 'center',
+        },
+        '& tbody td:first-of-type': {
+          verticalAlign: 'middle',
+        },
+      }}
+    >
+      <colgroup>
+        <col style={{ width: '76px' }} />
+        <col />
+      </colgroup>
+      <TableHead>
+        <TableRow>
+          <TableCell component="th" colSpan={2}>
+            {effectiveness}倍のタイプ一覧
+          </TableCell>
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        {sortedTypesList.map((typePair) => {
+          const [type1, type2] = Array.isArray(typePair) ? typePair : [typePair, null];
+          const rowKey = type2 ? `${type1}-${type2}` : type1;
+
+          return (
+            <TableRow key={rowKey}>
+              <TableCell
+                sx={{
+                  width: 76,
+                  padding: '8px 4px',
+                }}
+              >
+                {renderDefenseTypePair(typePair)}
+              </TableCell>
+              <TableCell sx={{ minWidth: 0 }}>
+                {renderEffectiveAttackTypes(type1, type2)}
+              </TableCell>
+            </TableRow>
+          );
+        })}
+      </TableBody>
+    </Table>
+  );
 
   const renderTypesList = () => {
     if (selectedAttackKeys.length === 0) return null;
@@ -523,9 +554,13 @@ const CoverageTable = ({
                     },
                   }}
                 >
+                  <colgroup>
+                    <col style={{ width: '160px' }} />
+                    <col />
+                  </colgroup>
                   <TableHead>
                     <TableRow>
-                      <TableCell component="th" sx={{ width: 220 }}>
+                      <TableCell component="th">
                         {effectiveness}倍のタイプ
                       </TableCell>
                       <TableCell component="th">
@@ -555,11 +590,10 @@ const CoverageTable = ({
               <Box
                 sx={{
                   mt: 2,
-                  display: { xs: 'grid', sm: 'none' },
-                  gap: 1,
+                  display: { xs: 'block', sm: 'none' },
                 }}
               >
-                {sortedTypesList.map(typePair => renderMobileTypeDetailCard(typePair))}
+                {renderMobileTypesTable(effectiveness, sortedTypesList, sectionStyle)}
               </Box>
             </Box>
           );
