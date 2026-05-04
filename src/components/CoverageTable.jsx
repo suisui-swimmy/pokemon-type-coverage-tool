@@ -208,74 +208,123 @@ const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
     const availableMultipliers = [4, 2].filter(multiplier => summary[multiplier].length > 0);
 
     if (availableMultipliers.length === 0) return null;
+
+    const renderSummaryEntries = (entries) => (
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
+        {entries.map(([type, count]) => (
+          <Box
+            key={type}
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 0.75,
+            }}
+          >
+            {renderTypeTag(type)}
+            <Typography
+              component="span"
+              sx={{
+                width: 44,
+                display: 'inline-block',
+                fontSize: '20px',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              × {count}
+            </Typography>
+          </Box>
+        ))}
+      </Box>
+    );
     
     return (
       <Box sx={{ mt: 2 }}>
-        <Table
-          size="small"
+        <Box
           sx={{
-            width: '100%',
-            tableLayout: 'fixed',
+            display: { xs: 'grid', sm: 'none' },
             backgroundColor: 'white',
-            borderCollapse: 'collapse',
-            '& th, & td': {
-              border: '1px solid #d8d8d8',
-              padding: '10px 12px',
-              verticalAlign: 'middle',
-            },
-            '& th': {
+            border: '1px solid #d8d8d8',
+          }}
+        >
+          <Box
+            sx={{
               backgroundColor: sectionStyle.accent,
               color: '#111',
               fontSize: '18px',
               fontWeight: 400,
               textAlign: 'center',
-            },
-          }}
-        >
-          <TableHead>
-            <TableRow>
-              <TableCell component="th" colSpan={2}>
-                {effectiveness}倍のタイプに対し有効なタイプの合計
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
+              py: 1,
+              px: 1.25,
+            }}
+          >
+            {effectiveness}倍のタイプに対し有効なタイプの合計
+          </Box>
+          <Box sx={{ display: 'grid' }}>
             {availableMultipliers.map(multiplier => (
-              <TableRow key={multiplier}>
-                <TableCell sx={{ width: 96, textAlign: 'center', fontSize: '20px', whiteSpace: 'nowrap' }}>
+              <Box
+                key={multiplier}
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: '58px 1fr',
+                  alignItems: 'start',
+                  px: 1.25,
+                  py: 1.5,
+                  gap: 0.75,
+                  minWidth: 0,
+                  borderTop: '1px solid #d8d8d8',
+                }}
+              >
+                <Typography sx={{ fontSize: '20px', whiteSpace: 'nowrap', lineHeight: '37px' }}>
                   {multiplier}倍
-                </TableCell>
-                <TableCell sx={{ minWidth: 0 }}>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
-                    {summary[multiplier].map(([type, count]) => (
-                      <Box
-                        key={type}
-                        sx={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 0.75,
-                        }}
-                      >
-                        {renderTypeTag(type)}
-                        <Typography
-                          component="span"
-                          sx={{
-                            width: 44,
-                            display: 'inline-block',
-                            fontSize: '20px',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          × {count}
-                        </Typography>
-                      </Box>
-                    ))}
-                  </Box>
+                </Typography>
+                {renderSummaryEntries(summary[multiplier])}
+              </Box>
+            ))}
+          </Box>
+        </Box>
+        <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+          <Table
+            size="small"
+            sx={{
+              width: '100%',
+              tableLayout: 'fixed',
+              backgroundColor: 'white',
+              borderCollapse: 'collapse',
+              '& th, & td': {
+                border: '1px solid #d8d8d8',
+                padding: '10px 12px',
+                verticalAlign: 'middle',
+              },
+              '& th': {
+                backgroundColor: sectionStyle.accent,
+                color: '#111',
+                fontSize: '18px',
+                fontWeight: 400,
+                textAlign: 'center',
+              },
+            }}
+          >
+            <TableHead>
+              <TableRow>
+                <TableCell component="th" colSpan={2}>
+                  {effectiveness}倍のタイプに対し有効なタイプの合計
                 </TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHead>
+            <TableBody>
+              {availableMultipliers.map(multiplier => (
+                <TableRow key={multiplier}>
+                  <TableCell sx={{ width: 96, textAlign: 'center', fontSize: '20px', whiteSpace: 'nowrap' }}>
+                    {multiplier}倍
+                  </TableCell>
+                <TableCell sx={{ minWidth: 0 }}>
+                  {renderSummaryEntries(summary[multiplier])}
+                </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Box>
       </Box>
     );
   };
@@ -341,6 +390,18 @@ const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
           gridTemplateColumns: availableMultipliers.length > 1 ? { xs: '1fr', sm: '1fr 1fr' } : '1fr',
           alignItems: 'stretch',
           minWidth: 0,
+          position: 'relative',
+          ...(availableMultipliers.length > 1 && {
+            '&::before': {
+              content: '""',
+              display: { xs: 'none', sm: 'block' },
+              position: 'absolute',
+              top: '-10px',
+              bottom: '-10px',
+              left: '50%',
+              borderLeft: '1px solid #d8d8d8',
+            },
+          }),
         }}
       >
         {availableMultipliers.map((multiplier, index) => (
@@ -351,12 +412,41 @@ const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
               py: 0.5,
               pl: index === 0 ? 0 : { xs: 0, sm: 1.5 },
               pr: index === 0 && availableMultipliers.length > 1 ? { xs: 0, sm: 1.5 } : 0,
-              borderLeft: index === 0 ? 0 : { xs: 0, sm: '1px solid #d8d8d8' },
             }}
           >
             {renderMultiplierAttackGroup(multiplier, effectiveness[multiplier])}
           </Box>
         ))}
+      </Box>
+    );
+  };
+
+  const renderMobileTypeDetailCard = (typePair) => {
+    const [type1, type2] = Array.isArray(typePair) ? typePair : [typePair, null];
+    const effectiveness = getEffectivenessForType(type1, type2);
+    const availableMultipliers = [4, 2].filter(multiplier => effectiveness[multiplier]?.length);
+
+    return (
+      <Box
+        key={type2 ? `${type1}-${type2}` : type1}
+        sx={{
+          p: 1.25,
+          backgroundColor: 'white',
+          border: '1px solid #d8d8d8',
+          display: 'grid',
+          gap: 1,
+        }}
+      >
+        <Box sx={{ justifySelf: 'start' }}>
+          {renderDefenseTypePair(typePair)}
+        </Box>
+        <Box sx={{ display: 'grid', gap: 0.75 }}>
+          {availableMultipliers.map(multiplier => (
+            <Box key={multiplier}>
+              {renderMultiplierAttackGroup(multiplier, effectiveness[multiplier])}
+            </Box>
+          ))}
+        </Box>
       </Box>
     );
   };
@@ -406,7 +496,7 @@ const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
                 </Box>
               </Box>
               {renderTypeSummary(effectiveness, sortedTypesList, sectionStyle)}
-              <Box sx={{ mt: 2 }}>
+              <Box sx={{ mt: 2, display: { xs: 'none', sm: 'block' } }}>
                 <Table
                   size="small"
                   sx={{
@@ -456,6 +546,15 @@ const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
                     })}
                   </TableBody>
                 </Table>
+              </Box>
+              <Box
+                sx={{
+                  mt: 2,
+                  display: { xs: 'grid', sm: 'none' },
+                  gap: 1,
+                }}
+              >
+                {sortedTypesList.map(typePair => renderMobileTypeDetailCard(typePair))}
               </Box>
             </Box>
           );
