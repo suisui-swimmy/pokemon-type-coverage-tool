@@ -246,7 +246,7 @@ const CoverageTable = ({
       <Box sx={{ mt: 2 }}>
         <Box
           sx={{
-            display: { xs: 'grid', sm: 'none' },
+            display: { xs: 'block', sm: 'none' },
             backgroundColor: 'white',
             border: '1px solid #d8d8d8',
           }}
@@ -264,28 +264,42 @@ const CoverageTable = ({
           >
             {effectiveness}倍のタイプに対し有効な攻撃の合計
           </Box>
-          <Box sx={{ display: 'grid' }}>
-            {availableMultipliers.map(multiplier => (
-              <Box
-                key={multiplier}
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: '58px 1fr',
-                  alignItems: 'start',
-                  px: 1.25,
-                  py: 1.5,
-                  gap: 0.75,
-                  minWidth: 0,
-                  borderTop: '1px solid #d8d8d8',
-                }}
-              >
-                <Typography sx={{ fontSize: '20px', whiteSpace: 'nowrap', lineHeight: '37px' }}>
-                  {multiplier}倍
-                </Typography>
-                {renderSummaryEntries(summary[multiplier])}
-              </Box>
-            ))}
-          </Box>
+          <Table
+            size="small"
+            sx={{
+              width: '100%',
+              tableLayout: 'fixed',
+              borderCollapse: 'collapse',
+              '& td': {
+                border: '1px solid #d8d8d8',
+                padding: '10px 8px',
+                verticalAlign: 'middle',
+              },
+            }}
+          >
+            <colgroup>
+              <col style={{ width: '76px' }} />
+              <col />
+            </colgroup>
+            <TableBody>
+              {availableMultipliers.map(multiplier => (
+                <TableRow key={multiplier}>
+                  <TableCell
+                    sx={{
+                      textAlign: 'center',
+                      fontSize: '20px',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {multiplier}倍
+                  </TableCell>
+                  <TableCell sx={{ minWidth: 0 }}>
+                    {renderSummaryEntries(summary[multiplier])}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </Box>
         <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
           <Table
@@ -309,6 +323,10 @@ const CoverageTable = ({
               },
             }}
           >
+            <colgroup>
+              <col style={{ width: '160px' }} />
+              <col />
+            </colgroup>
             <TableHead>
               <TableRow>
                 <TableCell component="th" colSpan={2}>
@@ -319,7 +337,7 @@ const CoverageTable = ({
             <TableBody>
               {availableMultipliers.map(multiplier => (
                 <TableRow key={multiplier}>
-                  <TableCell sx={{ width: 96, textAlign: 'center', fontSize: '20px', whiteSpace: 'nowrap' }}>
+                  <TableCell sx={{ textAlign: 'center', fontSize: '20px', whiteSpace: 'nowrap' }}>
                     {multiplier}倍
                   </TableCell>
                 <TableCell sx={{ minWidth: 0 }}>
