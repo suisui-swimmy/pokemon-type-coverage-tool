@@ -1,9 +1,11 @@
 import React from 'react';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, Box } from '@mui/material';
 import { typeData } from '../data/typeData';
-import { typeEffectiveness } from '../data/typeEffectiveness';
+import { specialAttackMoveIds } from '../data/specialAttackMoves';
+import { getAttackEffectiveness, isTypeAttack } from '../utils/attackEffectiveness';
 import { getDefenseTypeKey } from '../utils/defenseTypeKey';
 import TypeTag from './TypeTag';
+import SpecialMoveTag from './SpecialMoveTag';
 
 const SECTION_STYLES = {
   0.25: {
@@ -29,8 +31,15 @@ const SECTION_STYLES = {
   },
 };
 
-const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
+const CoverageTable = ({
+  selectedTypes,
+  selectedSpecialMoves = [],
+  availableSpecialMoveIds = specialAttackMoveIds,
+  excludedDefenseTypeKeys,
+}) => {
   const types = Object.keys(typeData);
+  const attackOptions = [...types, ...availableSpecialMoveIds];
+  const selectedAttackKeys = [...selectedTypes, ...selectedSpecialMoves];
 
   const getSectionStyle = (effectiveness) => SECTION_STYLES[effectiveness] || SECTION_STYLES[1];
 
@@ -38,7 +47,7 @@ const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
     excludedDefenseTypeKeys.has(getDefenseTypeKey(defenseType1, defenseType2))
   );
 
-  const calculateMaxEffectiveness = (defenseType1, defenseType2, attackTypes) => {
+  const calculateMaxEffectiveness = (defenseType1, defenseType2, attackKeys) => {
     if (types.indexOf(defenseType1) > types.indexOf(defenseType2)) {
       return null;
     }
@@ -47,26 +56,18 @@ const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
       return 'excluded';
     }
     
-    if (!attackTypes.length) return '-';
+    if (!attackKeys.length) return '-';
 
-    if (defenseType1 === defenseType2) {
-      return Math.max(...attackTypes.map(attackType => 
-        typeEffectiveness[defenseType1][attackType]
-      ));
-    }
-
-    return Math.max(...attackTypes.map(attackType => 
-      typeEffectiveness[defenseType1][attackType] * typeEffectiveness[defenseType2][attackType]
-    ));
+    return Math.max(...attackKeys.map(attackKey => (
+      getAttackEffectiveness(defenseType1, defenseType2, attackKey)
+    )));
   };
 
   const getEffectivenessForType = (defenseType1, defenseType2) => {
     const effectiveness = {};
     
-    types.forEach(attackType => {
-      let multiplier = defenseType2 
-        ? typeEffectiveness[defenseType1][attackType] * typeEffectiveness[defenseType2][attackType]
-        : typeEffectiveness[defenseType1][attackType];
+    attackOptions.forEach(attackType => {
+      const multiplier = getAttackEffectiveness(defenseType1, defenseType2, attackType);
         
       if (multiplier === 2 || multiplier === 4) {
         effectiveness[multiplier] = effectiveness[multiplier] || [];
@@ -143,7 +144,11 @@ const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
     return { ...baseStyle, backgroundColor: 'white' };
   };
 
-  const renderTypeTag = (type) => <TypeTag type={type} />;
+  const renderAttackTag = (attackType) => (
+    isTypeAttack(attackType)
+      ? <TypeTag type={attackType} />
+      : <SpecialMoveTag moveId={attackType} />
+  );
 
   const findTypesByEffectiveness = () => {
     const typeGroups = { 0.25: [], 0.5: [], 1: [] };
@@ -157,7 +162,7 @@ const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
           const effectiveness = calculateMaxEffectiveness(
             defenseType1,
             defenseType2,
-            selectedTypes
+            selectedAttackKeys
           );
           
           if (effectiveness === 0.25 || effectiveness === 0.5 || effectiveness === 1) {
@@ -197,9 +202,9 @@ const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
 
     return {
       4: Array.from(summary[4].entries())
-        .sort(([typeA, countA], [typeB, countB]) => countB - countA || types.indexOf(typeA) - types.indexOf(typeB)),
+        .sort(([typeA, countA], [typeB, countB]) => countB - countA || attackOptions.indexOf(typeA) - attackOptions.indexOf(typeB)),
       2: Array.from(summary[2].entries())
-        .sort(([typeA, countA], [typeB, countB]) => countB - countA || types.indexOf(typeA) - types.indexOf(typeB))
+        .sort(([typeA, countA], [typeB, countB]) => countB - countA || attackOptions.indexOf(typeA) - attackOptions.indexOf(typeB))
     };
   };
 
@@ -220,7 +225,7 @@ const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
               gap: 0.75,
             }}
           >
-            {renderTypeTag(type)}
+            {renderAttackTag(type)}
             <Typography
               component="span"
               sx={{
@@ -257,7 +262,7 @@ const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
               px: 1.25,
             }}
           >
-            {effectiveness}倍のタイプに対し有効なタイプの合計
+            {effectiveness}倍のタイプに対し有効な攻撃の合計
           </Box>
           <Box sx={{ display: 'grid' }}>
             {availableMultipliers.map(multiplier => (
@@ -307,7 +312,7 @@ const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
             <TableHead>
               <TableRow>
                 <TableCell component="th" colSpan={2}>
-                  {effectiveness}倍のタイプに対し有効なタイプの合計
+                  {effectiveness}倍のタイプに対し有効な攻撃の合計
                 </TableCell>
               </TableRow>
             </TableHead>
@@ -349,7 +354,7 @@ const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.75 }}>
         {typeList.map(type => (
           <Box key={type}>
-            {renderTypeTag(type)}
+            <TypeTag type={type} />
           </Box>
         ))}
       </Box>
@@ -372,7 +377,7 @@ const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
       <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.75, minWidth: 0 }}>
         {attackTypes.map(type => (
           <Box key={type}>
-            {renderTypeTag(type)}
+            {renderAttackTag(type)}
           </Box>
         ))}
       </Box>
@@ -452,7 +457,7 @@ const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
   };
 
   const renderTypesList = () => {
-    if (selectedTypes.length === 0) return null;
+    if (selectedAttackKeys.length === 0) return null;
 
     const typeGroups = findTypesByEffectiveness();
     
@@ -524,7 +529,7 @@ const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
                         {effectiveness}倍のタイプ
                       </TableCell>
                       <TableCell component="th">
-                        有効なタイプ
+                        有効な攻撃
                       </TableCell>
                     </TableRow>
                   </TableHead>
@@ -633,7 +638,7 @@ const CoverageTable = ({ selectedTypes, excludedDefenseTypeKeys }) => {
                   const effectiveness = calculateMaxEffectiveness(
                     defenseType1, 
                     defenseType2, 
-                    selectedTypes
+                    selectedAttackKeys
                   );
                   return (
                     <TableCell

@@ -3,9 +3,12 @@ import { Container, Typography, Box, Link, Paper, Button, IconButton, Tooltip } 
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import TypeButton from './components/TypeButton';
 import TypeTag from './components/TypeTag';
+import SpecialMoveButton from './components/SpecialMoveButton';
+import SpecialMoveTag from './components/SpecialMoveTag';
 import CoverageTable from './components/CoverageTable';
 import ExclusionSettingsDialog from './components/ExclusionSettingsDialog';
 import { typeData } from './data/typeData';
+import { specialAttackMoveIds } from './data/specialAttackMoves';
 import { exclusionPresets } from './data/exclusionPresets';
 import { getAllDefenseTypeKeys } from './utils/defenseTypeKey';
 import infoIconUrl from './assets/info-icon.svg';
@@ -13,6 +16,7 @@ import settingsGearIconUrl from './assets/settings-gear-icon.svg';
 import './App.css';
 
 const EXCLUDED_DEFENSE_TYPES_STORAGE_KEY = 'pokemon-type-coverage-tool.excluded-defense-types';
+const EXCLUDED_SPECIAL_MOVES_STORAGE_KEY = 'pokemon-type-coverage-tool.excluded-special-moves';
 
 const theme = createTheme({
   typography: {
@@ -22,6 +26,7 @@ const theme = createTheme({
 
 function App() {
   const [selectedTypes, setSelectedTypes] = useState([]);
+  const [selectedSpecialMoves, setSelectedSpecialMoves] = useState([]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [excludedDefenseTypeKeys, setExcludedDefenseTypeKeys] = useState(() => {
     try {
@@ -33,10 +38,32 @@ function App() {
       return [];
     }
   });
+  const [excludedSpecialMoveIds, setExcludedSpecialMoveIds] = useState(() => {
+    try {
+      const savedValue = window.localStorage.getItem(EXCLUDED_SPECIAL_MOVES_STORAGE_KEY);
+      const parsedValue = JSON.parse(savedValue);
+
+      return Array.isArray(parsedValue) ? parsedValue : specialAttackMoveIds;
+    } catch {
+      return specialAttackMoveIds;
+    }
+  });
 
   const excludedDefenseTypeKeySet = useMemo(
     () => new Set(excludedDefenseTypeKeys),
     [excludedDefenseTypeKeys]
+  );
+  const excludedSpecialMoveIdSet = useMemo(
+    () => new Set(excludedSpecialMoveIds),
+    [excludedSpecialMoveIds]
+  );
+  const availableSpecialMoveIds = useMemo(
+    () => specialAttackMoveIds.filter((moveId) => !excludedSpecialMoveIdSet.has(moveId)),
+    [excludedSpecialMoveIdSet]
+  );
+  const selectedAvailableSpecialMoves = useMemo(
+    () => selectedSpecialMoves.filter((moveId) => !excludedSpecialMoveIdSet.has(moveId)),
+    [excludedSpecialMoveIdSet, selectedSpecialMoves]
   );
 
   useEffect(() => {
@@ -46,6 +73,13 @@ function App() {
     );
   }, [excludedDefenseTypeKeys]);
 
+  useEffect(() => {
+    window.localStorage.setItem(
+      EXCLUDED_SPECIAL_MOVES_STORAGE_KEY,
+      JSON.stringify(excludedSpecialMoveIds)
+    );
+  }, [excludedSpecialMoveIds]);
+
   const handleTypeClick = (type) => {
     setSelectedTypes(prev => 
       prev.includes(type) 
@@ -54,8 +88,17 @@ function App() {
     );
   };
 
+  const handleSpecialMoveClick = (moveId) => {
+    setSelectedSpecialMoves(prev =>
+      prev.includes(moveId)
+        ? prev.filter(id => id !== moveId)
+        : [...prev, moveId]
+    );
+  };
+
   const handleReset = () => {
     setSelectedTypes([]);
+    setSelectedSpecialMoves([]);
   };
 
   const handleToggleExcludedDefenseType = (key) => {
@@ -74,6 +117,26 @@ function App() {
 
   const handleResetExcludedDefenseTypes = () => {
     setExcludedDefenseTypeKeys([]);
+  };
+
+  const handleToggleExcludedSpecialMove = (moveId) => {
+    const willExclude = !excludedSpecialMoveIdSet.has(moveId);
+
+    if (willExclude) {
+      setSelectedSpecialMoves((prev) => prev.filter((id) => id !== moveId));
+    }
+
+    setExcludedSpecialMoveIds((prev) => {
+      const next = new Set(prev);
+
+      if (next.has(moveId)) {
+        next.delete(moveId);
+      } else {
+        next.add(moveId);
+      }
+
+      return Array.from(next);
+    });
   };
 
   const handleExcludeAllDefenseTypes = () => {
@@ -149,44 +212,66 @@ function App() {
         </Box>
 
         <Paper sx={{ bgcolor: '#f4f6f7', p: 3 }}>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', mb: 2 }}>
-            {Object.keys(typeData).map((type) => (
-              <TypeButton
-                key={type}
-                type={type}
-                isSelected={selectedTypes.includes(type)}
-                onClick={handleTypeClick}
-              />
-            ))}
-            <Box sx={{ flexGrow: 1 }} />
-            <Button 
-              variant="contained" 
-              sx={{ 
-                backgroundColor: '#808080',
-                color: 'white',
-                '&:hover': {
-                  backgroundColor: '#606060',
-                },
-              }} 
-              onClick={handleReset}
-            >
-              リセット
-            </Button>
+          <Box sx={{ display: 'grid', gap: 1.25, mb: 2 }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center' }}>
+              {Object.keys(typeData).map((type) => (
+                <TypeButton
+                  key={type}
+                  type={type}
+                  isSelected={selectedTypes.includes(type)}
+                  onClick={handleTypeClick}
+                />
+              ))}
+              <Box sx={{ flexGrow: 1 }} />
+              <Button
+                variant="contained"
+                sx={{
+                  backgroundColor: '#808080',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: '#606060',
+                  },
+                }}
+                onClick={handleReset}
+              >
+                リセット
+              </Button>
+            </Box>
+            {availableSpecialMoveIds.length > 0 && (
+              <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+                <Typography sx={{ fontSize: '18px', fontWeight: 700, color: '#333' }}>
+                  特別技
+                </Typography>
+                {availableSpecialMoveIds.map((moveId) => (
+                  <SpecialMoveButton
+                    key={moveId}
+                    moveId={moveId}
+                    isSelected={selectedAvailableSpecialMoves.includes(moveId)}
+                    onClick={handleSpecialMoveClick}
+                  />
+                ))}
+              </Box>
+            )}
           </Box>
 
           <Box sx={{ my: 2, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
             <Typography variant="h5" component="span" sx={{ fontSize: '24px' }}>
-              ▍選択したタイプ:
+              ▍選択した攻撃:
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.75 }}>
               {selectedTypes.map((type) => (
                 <TypeTag key={type} type={type} />
+              ))}
+              {selectedAvailableSpecialMoves.map((moveId) => (
+                <SpecialMoveTag key={moveId} moveId={moveId} />
               ))}
             </Box>
           </Box>
 
           <CoverageTable
             selectedTypes={selectedTypes}
+            selectedSpecialMoves={selectedAvailableSpecialMoves}
+            availableSpecialMoveIds={availableSpecialMoveIds}
             excludedDefenseTypeKeys={excludedDefenseTypeKeySet}
           />
         </Paper>
@@ -208,11 +293,13 @@ function App() {
         <ExclusionSettingsDialog
           open={isSettingsOpen}
           excludedDefenseTypeKeys={excludedDefenseTypeKeySet}
+          excludedSpecialMoveIds={excludedSpecialMoveIdSet}
           onApplyPreset={handleApplyExclusionPreset}
           onClose={() => setIsSettingsOpen(false)}
           onExcludeAll={handleExcludeAllDefenseTypes}
           presets={exclusionPresets}
           onReset={handleResetExcludedDefenseTypes}
+          onToggleSpecialMove={handleToggleExcludedSpecialMove}
           onToggle={handleToggleExcludedDefenseType}
         />
       </Container>
