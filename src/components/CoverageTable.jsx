@@ -4,6 +4,7 @@ import { typeData } from '../data/typeData';
 import { specialAttackMoveIds } from '../data/specialAttackMoves';
 import { getAttackEffectiveness, isTypeAttack } from '../utils/attackEffectiveness';
 import { getDefenseTypeKey } from '../utils/defenseTypeKey';
+import { getYakkunTypeSearchUrl } from '../utils/yakkunTypeSearch';
 import TypeTag from './TypeTag';
 import SpecialMoveTag from './SpecialMoveTag';
 
@@ -367,14 +368,36 @@ const CoverageTable = ({
 
   const renderDefenseTypePair = (typePair) => {
     const typeList = Array.isArray(typePair) ? typePair : [typePair];
+    const typeTags = typeList.map(type => (
+      <Box key={type}>
+        <TypeTag type={type} />
+      </Box>
+    ));
 
     return (
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.75 }}>
-        {typeList.map(type => (
-          <Box key={type}>
-            <TypeTag type={type} />
-          </Box>
-        ))}
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Box
+          component="a"
+          href={getYakkunTypeSearchUrl(typeList)}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={`ポケモン徹底攻略で${typeList.map(type => typeData[type].name).join('・')}タイプのポケモン一覧を開く`}
+          aria-label={`ポケモン徹底攻略で${typeList.map(type => typeData[type].name).join('・')}タイプのポケモン一覧を開く`}
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 0.75,
+            color: 'inherit',
+            textDecoration: 'none',
+            '&:focus-visible': {
+              outline: '3px solid #1a73e8',
+              outlineOffset: '3px',
+            },
+          }}
+        >
+          {typeTags}
+        </Box>
       </Box>
     );
   };
