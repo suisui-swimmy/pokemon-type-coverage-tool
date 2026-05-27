@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Container, Typography, Box, Link, Paper, Button, IconButton, Tooltip } from '@mui/material';
+import { Container, Typography, Box, Link, Paper, Button, IconButton, Tooltip, Fab } from '@mui/material';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import TypeButton from './components/TypeButton';
 import TypeTag from './components/TypeTag';
@@ -17,12 +17,27 @@ import './App.css';
 
 const EXCLUDED_DEFENSE_TYPES_STORAGE_KEY = 'pokemon-type-coverage-tool.excluded-defense-types';
 const EXCLUDED_SPECIAL_MOVES_STORAGE_KEY = 'pokemon-type-coverage-tool.excluded-special-moves';
+const EXCLUDED_DEFENSE_TYPES_DEFAULT_PRESET_KEY = 'pokemon-type-coverage-tool.excluded-defense-types-default-preset';
+const DEFAULT_EXCLUSION_PRESET_ID = 'regulation-m-a';
+const MANUAL_EXCLUSION_PRESET_ID = 'manual';
+const DEFAULT_EXCLUDED_DEFENSE_TYPE_KEYS = (
+  exclusionPresets.find((preset) => preset.id === DEFAULT_EXCLUSION_PRESET_ID)
+    ?.excludedDefenseTypeKeys ?? []
+);
 
 const theme = createTheme({
   typography: {
     fontFamily: '"LINE Seed JP", sans-serif',
   },
 });
+
+const areTypeKeyListsEqual = (keys, presetKeys) => {
+  if (keys.length !== presetKeys.length) return false;
+
+  const keySet = new Set(keys);
+
+  return presetKeys.every((key) => keySet.has(key));
+};
 
 function App() {
   const [selectedTypes, setSelectedTypes] = useState([]);
@@ -31,11 +46,35 @@ function App() {
   const [excludedDefenseTypeKeys, setExcludedDefenseTypeKeys] = useState(() => {
     try {
       const savedValue = window.localStorage.getItem(EXCLUDED_DEFENSE_TYPES_STORAGE_KEY);
+      const appliedDefaultPresetId = window.localStorage.getItem(EXCLUDED_DEFENSE_TYPES_DEFAULT_PRESET_KEY);
       const parsedValue = JSON.parse(savedValue);
 
-      return Array.isArray(parsedValue) ? parsedValue : [];
+      if (
+        !Array.isArray(parsedValue) ||
+        (parsedValue.length === 0 && appliedDefaultPresetId !== MANUAL_EXCLUSION_PRESET_ID)
+      ) {
+        window.localStorage.setItem(
+          EXCLUDED_DEFENSE_TYPES_STORAGE_KEY,
+          JSON.stringify(DEFAULT_EXCLUDED_DEFENSE_TYPE_KEYS)
+        );
+        window.localStorage.setItem(
+          EXCLUDED_DEFENSE_TYPES_DEFAULT_PRESET_KEY,
+          DEFAULT_EXCLUSION_PRESET_ID
+        );
+        return DEFAULT_EXCLUDED_DEFENSE_TYPE_KEYS;
+      }
+
+      return Array.isArray(parsedValue) ? parsedValue : DEFAULT_EXCLUDED_DEFENSE_TYPE_KEYS;
     } catch {
-      return [];
+      window.localStorage.setItem(
+        EXCLUDED_DEFENSE_TYPES_STORAGE_KEY,
+        JSON.stringify(DEFAULT_EXCLUDED_DEFENSE_TYPE_KEYS)
+      );
+      window.localStorage.setItem(
+        EXCLUDED_DEFENSE_TYPES_DEFAULT_PRESET_KEY,
+        DEFAULT_EXCLUSION_PRESET_ID
+      );
+      return DEFAULT_EXCLUDED_DEFENSE_TYPE_KEYS;
     }
   });
   const [excludedSpecialMoveIds, setExcludedSpecialMoveIds] = useState(() => {
@@ -65,6 +104,18 @@ function App() {
     () => selectedSpecialMoves.filter((moveId) => !excludedSpecialMoveIdSet.has(moveId)),
     [excludedSpecialMoveIdSet, selectedSpecialMoves]
   );
+  const exclusionStatusLabel = useMemo(() => {
+    if (excludedDefenseTypeKeys.length === 0) return 'なし';
+
+    const matchingPreset = exclusionPresets.find((preset) => (
+      areTypeKeyListsEqual(excludedDefenseTypeKeys, preset.excludedDefenseTypeKeys)
+    ));
+
+    if (matchingPreset) return matchingPreset.label;
+    if (excludedDefenseTypeKeys.length === getAllDefenseTypeKeys().length) return '全除外';
+
+    return `${excludedDefenseTypeKeys.length}件`;
+  }, [excludedDefenseTypeKeys]);
 
   useEffect(() => {
     window.localStorage.setItem(
@@ -101,7 +152,15 @@ function App() {
     setSelectedSpecialMoves([]);
   };
 
+  const handleScrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleToggleExcludedDefenseType = (key) => {
+    window.localStorage.setItem(
+      EXCLUDED_DEFENSE_TYPES_DEFAULT_PRESET_KEY,
+      MANUAL_EXCLUSION_PRESET_ID
+    );
     setExcludedDefenseTypeKeys((prev) => {
       const next = new Set(prev);
 
@@ -116,6 +175,10 @@ function App() {
   };
 
   const handleResetExcludedDefenseTypes = () => {
+    window.localStorage.setItem(
+      EXCLUDED_DEFENSE_TYPES_DEFAULT_PRESET_KEY,
+      MANUAL_EXCLUSION_PRESET_ID
+    );
     setExcludedDefenseTypeKeys([]);
   };
 
@@ -140,10 +203,18 @@ function App() {
   };
 
   const handleExcludeAllDefenseTypes = () => {
+    window.localStorage.setItem(
+      EXCLUDED_DEFENSE_TYPES_DEFAULT_PRESET_KEY,
+      MANUAL_EXCLUSION_PRESET_ID
+    );
     setExcludedDefenseTypeKeys(getAllDefenseTypeKeys());
   };
 
   const handleApplyExclusionPreset = (preset) => {
+    window.localStorage.setItem(
+      EXCLUDED_DEFENSE_TYPES_DEFAULT_PRESET_KEY,
+      preset.id
+    );
     setExcludedDefenseTypeKeys(preset.excludedDefenseTypeKeys);
   };
 
@@ -177,6 +248,18 @@ function App() {
             ポケモン技範囲考察ツール
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '0 0 auto' }}>
+            <Typography
+              aria-label={`除外設定: ${exclusionStatusLabel}`}
+              sx={{
+                color: '#333',
+                fontSize: { xs: '0.78rem', sm: '0.9rem' },
+                fontWeight: 700,
+                lineHeight: 1,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              除外設定: {exclusionStatusLabel}
+            </Typography>
             <Tooltip title="除外設定">
               <IconButton
                 aria-label="除外設定を開く"
@@ -212,7 +295,18 @@ function App() {
         </Box>
 
         <Paper sx={{ bgcolor: '#f4f6f7', p: 3 }}>
-          <Box sx={{ display: 'grid', gap: 1.25, mb: 2 }}>
+          <Box
+            sx={(theme) => ({
+              position: 'sticky',
+              top: 0,
+              zIndex: theme.zIndex.appBar,
+              display: 'grid',
+              gap: 1.25,
+              mb: 2,
+              py: 1,
+              bgcolor: '#f4f6f7',
+            })}
+          >
             <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center' }}>
               {Object.keys(typeData).map((type) => (
                 <TypeButton
@@ -256,7 +350,7 @@ function App() {
 
           <Box sx={{ my: 2, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
             <Typography variant="h5" component="span" sx={{ fontSize: '24px' }}>
-              ▍選択した攻撃:
+              ▍選択したタイプ:
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.75 }}>
               {selectedTypes.map((type) => (
@@ -290,6 +384,26 @@ function App() {
             © 2024 suisui-swimmy
           </Typography>
         </Box>
+        <Tooltip title="ページ上部へ戻る">
+          <Fab
+            size="small"
+            aria-label="ページ上部へ戻る"
+            onClick={handleScrollToTop}
+            sx={(theme) => ({
+              position: 'fixed',
+              right: { xs: 16, sm: 24 },
+              bottom: { xs: 16, sm: 24 },
+              zIndex: theme.zIndex.speedDial,
+              bgcolor: '#606060',
+              color: 'white',
+              '&:hover': {
+                bgcolor: '#404040',
+              },
+            })}
+          >
+            ↑
+          </Fab>
+        </Tooltip>
         <ExclusionSettingsDialog
           open={isSettingsOpen}
           excludedDefenseTypeKeys={excludedDefenseTypeKeySet}
