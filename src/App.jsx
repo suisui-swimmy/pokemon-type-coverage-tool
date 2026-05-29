@@ -277,7 +277,7 @@ function App() {
             <Tooltip title="使い方">
               <IconButton
                 component={Link}
-                href="https://github.com/suisui-swimmy/pokemon-type-coverage-tool/blob/main/README"
+                href="https://github.com/suisui-swimmy/pokemon-type-coverage-tool/blob/main/README.md"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="使い方を開く"
