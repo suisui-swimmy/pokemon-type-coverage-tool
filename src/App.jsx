@@ -18,7 +18,8 @@ import './App.css';
 const EXCLUDED_DEFENSE_TYPES_STORAGE_KEY = 'pokemon-type-coverage-tool.excluded-defense-types';
 const EXCLUDED_SPECIAL_MOVES_STORAGE_KEY = 'pokemon-type-coverage-tool.excluded-special-moves';
 const EXCLUDED_DEFENSE_TYPES_DEFAULT_PRESET_KEY = 'pokemon-type-coverage-tool.excluded-defense-types-default-preset';
-const DEFAULT_EXCLUSION_PRESET_ID = 'regulation-m-a';
+const LEGACY_REGULATION_M_A_PRESET_ID = 'regulation-m-a';
+const DEFAULT_EXCLUSION_PRESET_ID = 'regulation-m-b';
 const MANUAL_EXCLUSION_PRESET_ID = 'manual';
 const DEFAULT_EXCLUDED_DEFENSE_TYPE_KEYS = (
   exclusionPresets.find((preset) => preset.id === DEFAULT_EXCLUSION_PRESET_ID)
@@ -48,6 +49,18 @@ function App() {
       const savedValue = window.localStorage.getItem(EXCLUDED_DEFENSE_TYPES_STORAGE_KEY);
       const appliedDefaultPresetId = window.localStorage.getItem(EXCLUDED_DEFENSE_TYPES_DEFAULT_PRESET_KEY);
       const parsedValue = JSON.parse(savedValue);
+
+      if (appliedDefaultPresetId === LEGACY_REGULATION_M_A_PRESET_ID) {
+        window.localStorage.setItem(
+          EXCLUDED_DEFENSE_TYPES_STORAGE_KEY,
+          JSON.stringify(DEFAULT_EXCLUDED_DEFENSE_TYPE_KEYS)
+        );
+        window.localStorage.setItem(
+          EXCLUDED_DEFENSE_TYPES_DEFAULT_PRESET_KEY,
+          DEFAULT_EXCLUSION_PRESET_ID
+        );
+        return DEFAULT_EXCLUDED_DEFENSE_TYPE_KEYS;
+      }
 
       if (
         !Array.isArray(parsedValue) ||
